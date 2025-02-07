@@ -1,0 +1,82 @@
+-- Duplicate values, Inconsistency, Joins, and Updates
+
+--Identifying duplicates values - Count'em!
+
+SELECT product_name, COUNT*
+FROM product
+GROUP BY product_name;
+
+--Join to get information for a fact table from a dimention table (having a 'sales' and 'customer' tables) 
+
+SELECT
+	s.id, s.id_customer, s.sale_date, s.product_code
+	, c.name, c.last_name
+	, p.product_name
+	, COUNT(*) AS duplicated
+FROM sales s
+LEFT JOIN customers s
+	ON s.id_customer = c.id_customer
+LEFT JOIN products s
+	ON p.product_name = p.product_code
+GROUP BY s.id, s.id_customer, s.sale_date, s.product_code, c.name, c.last_name, p.product_name
+
+/*1491
+--Command to update information in the tables
+UPDATE <table>
+SET column = column name
+WHERE key = correct value
+*/
+
+--Handy functions
+START TRANSACTION (research about it)
+ROLLBACK; (CTRL Z)
+TRUNCATE column/table; (Delete all rows)
+
+--Deleting row
+DELETE FROM product
+WHERE product_code = 10
+
+--Dealing with duplicated values
+
+SELECT
+	product_name, brand, category,
+	COUNT(*) AS duplicated
+FROM product
+GROUP BY product_name, brand, category
+
+--New approach using it as a subquery
+
+SELECT a.product_name, a.brand, a.category, a.duplicated
+	, CASE WHEN a.duplicated > 1 THEN 'Yes'
+		WHEN a.duplicated = 1 THEN 'No'
+	END AS duplicated
+FROM
+(
+	SELECT
+		product_name, brand, category,
+		COUNT (*) AS duplicated
+	FROM product
+	GROUP BY product_name, brand, category
+) a
+WHERE duplicated > 1
+GROUP BY a.duplicated, a.product_name, a.brand, a.category;
+
+-- Third way to consult duplicated items
+
+SELECT
+	product_name
+	, brand
+	, category
+	, COUNT (*) AS duplicated
+FROM products
+GROUP BY product_name, brand, category
+HAVING
+	COUNT(*) > 1;
+
+-- Getting rid of duplicated values
+
+SELECT
+	product_name
+	, COUNT (DISTINCT unit_price) AS total_regis
+FROM  products
+GROUP BY product_name;
