@@ -1,6 +1,6 @@
 -- Duplicate values, Inconsistency, Joins, and Updates
 
--- Identifying duplicates values - Count'em!
+-- Identifying duplicate values - Count'em!
 SELECT product_name, COUNT(*)
 FROM product
 GROUP BY product_name;
