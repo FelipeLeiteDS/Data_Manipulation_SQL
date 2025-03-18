@@ -7,16 +7,16 @@ GROUP BY product_name;
 
 -- Join to get information for a fact table from a dimension table
 SELECT
-    s.id, s.customer_id, s.order_date, s.product_id
-    , c.first_name, c.last_name
+    o.id, o.id_customer, o.order_date, o.id_product
+    , c.name, c.last_name
     , p.product_name
     , COUNT(*) AS duplicated
-FROM orders s
-LEFT JOIN customers c
-    ON s.customer_id = c.customer_id
-LEFT JOIN products p
-    ON s.product_id = p.product_id
-GROUP BY s.id, s.customer_id, s.order_date, s.product_id, c.first_name, c.last_name, p.product_name;
+FROM orders o
+LEFT JOIN customer c
+    ON o.id_customer = c.id_customer
+LEFT JOIN product p
+    ON o.id_product = p.id_product
+GROUP BY o.id_order, o.id_customer, o.order_date, o.id_product, c.name, c.last_name, p.product_name;
 
 -- Command to update information in the tables
 UPDATE <table>
@@ -30,7 +30,7 @@ TRUNCATE TABLE table_name;
 
 -- Deleting row
 DELETE FROM product
-WHERE product_id = 10;
+WHERE id_product = 10;
 
 -- Dealing with duplicated values (subquery approach)
 SELECT a.product_name, a.brand, a.category, a.duplicated,
@@ -47,7 +47,7 @@ FROM
 ) a
 WHERE a.duplicated > 1;
 
--- Third way to consult duplicated items
+-- Another way to consult duplicated items
 SELECT
     product_name
     , brand
