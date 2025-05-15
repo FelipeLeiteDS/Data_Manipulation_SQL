@@ -112,7 +112,7 @@ In my e-commerce data management projects, these SQL techniques have been instru
 This SQL toolkit demonstrates my ability to maintain high data quality standards in complex e-commerce databases. By effectively managing duplicates and inconsistencies, I ensure that downstream analytics and business decisions are based on accurate, reliable data. These skills are essential in today's data-driven business environment, where data quality directly impacts operational efficiency and strategic decision-making.
 
 ## Portfolio and Contact
-- Explore my work and connect with me:
+Explore my work and connect with me:
 
 <div> 
   <a href = "https://linktr.ee/FelipeLeiteDS"><img src="https://img.shields.io/badge/LinkTree-1de9b6?logo=linktree&logoColor=white" target="_blank"></a>
