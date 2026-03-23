@@ -44,5 +44,5 @@ INSERT INTO product (id_product, product_name, brand, category, unit_price) VALU
 (2, 'Smartphone', 'MobileCo', 'Electronics', 599.99);
 
 INSERT INTO orders (id_order, id_customer, order_date, id_product, quantity) VALUES
-(1, 1, '2023-01-01', 1, 1),
-(2, 2, '2023-01-02', 2, 2);
+(1, 1, '2025-01-01', 1, 1),
+(2, 2, '2025-01-02', 2, 2);
