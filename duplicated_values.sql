@@ -14,7 +14,7 @@ GROUP BY product_name;
 
 -- ------------------------------------------------------------
 -- 2. ENRICHED ORDERS VIEW (fact + dimension join)
--- LEFT JOINs preserve all orders even when customer or product
+-- LEFT JOINs preserve all orders even when the customer or product
 -- data is missing — useful for spotting referential integrity issues.
 -- COALESCE replaces NULLs with a fallback so reports stay clean.
 -- ------------------------------------------------------------
