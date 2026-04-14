@@ -1,65 +1,143 @@
--- Duplicate values, Inconsistency, Joins, and Updates
+-- ============================================================
+-- DATA QUALITY: Duplicates, Inconsistencies, Joins & Updates
+-- ============================================================
 
--- Identifying duplicate values - Count'em!
-SELECT product_name, COUNT(*)
-FROM product
+
+-- ------------------------------------------------------------
+-- 1. QUICK DUPLICATE CHECK
+-- Count occurrences of each product name to spot duplicates.
+-- ------------------------------------------------------------
+SELECT product_name, COUNT(*) AS occurrences
+FROM products
 GROUP BY product_name;
 
--- Join to get information for a fact table from a dimension table
+
+-- ------------------------------------------------------------
+-- 2. ENRICHED ORDERS VIEW (fact + dimension join)
+-- LEFT JOINs preserve all orders even when customer or product
+-- data is missing — useful for spotting referential integrity issues.
+-- COALESCE replaces NULLs with a fallback so reports stay clean.
+-- ------------------------------------------------------------
 SELECT
-    o.id, o.id_customer, o.order_date, o.id_product
-    , c.name, c.last_name
-    , p.product_name
-    , COUNT(*) AS duplicated
+    o.id_order,
+    o.id_customer,
+    o.order_date,
+    o.id_product,
+    COALESCE(c.name, 'Unknown')      AS customer_name,
+    COALESCE(c.last_name, 'Unknown') AS customer_last_name,
+    COALESCE(p.product_name, 'N/A')  AS product_name
 FROM orders o
-LEFT JOIN customer c
+LEFT JOIN customers c
     ON o.id_customer = c.id_customer
-LEFT JOIN product p
-    ON o.id_product = p.id_product
-GROUP BY o.id_order, o.id_customer, o.order_date, o.id_product, c.name, c.last_name, p.product_name;
+LEFT JOIN products p
+    ON o.id_product = p.id_product;
 
--- Command to update information in the tables
-UPDATE <table>
-SET column = 'new_value'
-WHERE key = 'condition_value';
 
--- Handy functions
+-- ------------------------------------------------------------
+-- 3. SAFE UPDATE PATTERN
+-- Always wrap destructive changes in a transaction so you can
+-- roll back if the WHERE clause targets the wrong rows.
+-- ------------------------------------------------------------
 START TRANSACTION;
-ROLLBACK;
+
+UPDATE products
+SET column_name = 'new_value'
+WHERE id_product = 'condition_value';
+
+-- Verify the change before committing:
+-- SELECT * FROM products WHERE id_product = 'condition_value';
+ROLLBACK; -- swap for COMMIT; once you've confirmed the result
+
+
+-- ------------------------------------------------------------
+-- 4. OTHER HANDY MAINTENANCE COMMANDS
+-- TRUNCATE removes all rows but keeps the table structure.
+-- DELETE targets specific rows by condition.
+-- ------------------------------------------------------------
+
+-- Remove all rows (faster than DELETE with no WHERE):
 TRUNCATE TABLE table_name;
 
--- Deleting row
-DELETE FROM product
+-- Remove a single row by primary key:
+DELETE FROM products
 WHERE id_product = 10;
 
--- Dealing with duplicated values (subquery approach)
-SELECT a.product_name, a.brand, a.category, a.duplicated,
-    CASE WHEN a.duplicated > 1 THEN 'Yes'
-        WHEN a.duplicated = 1 THEN 'No'
+
+-- ------------------------------------------------------------
+-- 5A. FIND DUPLICATES — subquery approach
+-- Returns only duplicated products along with an is_duplicated flag.
+-- Useful when you need the extra label column for exports or dashboards.
+-- ------------------------------------------------------------
+SELECT
+    a.product_name,
+    a.brand,
+    a.category,
+    a.occurrences,
+    CASE
+        WHEN a.occurrences > 1 THEN 'Yes'
+        ELSE 'No'
     END AS is_duplicated
-FROM
-(
+FROM (
     SELECT
-        product_name, brand, category,
-        COUNT(*) AS duplicated
-    FROM product
+        product_name,
+        brand,
+        category,
+        COUNT(*) AS occurrences
+    FROM products
     GROUP BY product_name, brand, category
 ) a
-WHERE a.duplicated > 1;
+WHERE a.occurrences > 1;
 
--- Another way to consult duplicated items
+
+-- ------------------------------------------------------------
+-- 5B. FIND DUPLICATES — HAVING approach (cleaner for quick checks)
+-- Prefer this when you only need to list the duplicated groups.
+-- ------------------------------------------------------------
 SELECT
-    product_name
-    , brand
-    , category
-    , COUNT(*) AS duplicated
+    product_name,
+    brand,
+    category,
+    COUNT(*) AS occurrences
 FROM products
 GROUP BY product_name, brand, category
 HAVING COUNT(*) > 1;
 
--- Getting distinct prices for each product
+
+-- ------------------------------------------------------------
+-- 5C. FIND DUPLICATES — ROW_NUMBER() approach (modern, interview-ready)
+-- Assigns a row number within each duplicate group. Rows where
+-- row_num > 1 are the duplicates — easy to DELETE or inspect.
+-- ------------------------------------------------------------
+WITH ranked_products AS (
+    SELECT
+        id_product,
+        product_name,
+        brand,
+        category,
+        ROW_NUMBER() OVER (
+            PARTITION BY product_name, brand, category
+            ORDER BY id_product
+        ) AS row_num
+    FROM products
+)
+SELECT *
+FROM ranked_products
+WHERE row_num > 1;
+
+-- To delete the duplicates, swap the final SELECT for:
+-- DELETE FROM products WHERE id_product IN (
+--     SELECT id_product FROM ranked_products WHERE row_num > 1
+-- );
+
+
+-- ------------------------------------------------------------
+-- 6. COUNT DISTINCT PRICES PER PRODUCT
+-- Flags products with inconsistent pricing across orders.
+-- More than 1 distinct price may indicate a data entry error.
+-- ------------------------------------------------------------
 SELECT
-    product_name
-    , COUNT(DISTINCT unit_price) AS total_distinct_prices
+    product_name,
+    COUNT(DISTINCT unit_price) AS distinct_price_count
 FROM products
-GROUP BY product_name;
+GROUP BY product_name
+HAVING COUNT(DISTINCT unit_price) > 1;
